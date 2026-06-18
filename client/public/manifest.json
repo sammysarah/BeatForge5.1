@@ -1,0 +1,23 @@
+{
+  "name": "BeatForge Studio",
+  "short_name": "BeatForge",
+  "description": "Browser-basierte Musik-Produktions-App mit Step Sequencer, Mixer und Effekten",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E1A",
+  "theme_color": "#FF6B00",
+  "orientation": "landscape",
+  "categories": ["music", "entertainment", "productivity"],
+  "icons": [
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663758346396/CLdCVJph9FshgRHu4B3M5H/beatforge-logo-8gPbCPReEmEDRnmTwbsu9W.webp",
+      "sizes": "192x192",
+      "type": "image/webp"
+    },
+    {
+      "src": "https://d2xsxph8kpxj0f.cloudfront.net/310519663758346396/CLdCVJph9FshgRHu4B3M5H/beatforge-logo-ZL8jmzoAQHWQ9AEDWrVb9g.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

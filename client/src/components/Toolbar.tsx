@@ -4,16 +4,20 @@
  * Design: Neon Circuit – Hardware panel aesthetic
  */
 
-import { Play, Square, Download, Trash2, Usb } from 'lucide-react';
+import { Play, Square, Download, Trash2, Usb, Music, Disc3 } from 'lucide-react';
 import { useDAWStore } from '@/lib/store';
 import { useAudio } from '@/hooks/useAudio';
 import { useCallback, useState } from 'react';
 import { MidiSettings } from './MidiSettings';
+import { PresetsDialog } from './PresetsDialog';
+import { DrumKitSelector } from './DrumKitSelector';
 
 export function Toolbar() {
   const { isPlaying, bpm, setBpm, togglePlayback, stop, clearPattern, audioReady } = useDAWStore();
   const { initAudio, exportWAV } = useAudio();
   const [midiOpen, setMidiOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [kitOpen, setKitOpen] = useState(false);
 
   const handlePlay = useCallback(async () => {
     await initAudio();
@@ -115,6 +119,22 @@ export function Toolbar() {
       {/* Action Buttons */}
       <div className="flex items-center gap-2 ml-4">
         <button
+          onClick={() => setPresetsOpen(true)}
+          className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-orange hover:border-forge-orange/50 transition-all duration-100 active:scale-95"
+          title="Beat Presets"
+        >
+          <Music className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => setKitOpen(true)}
+          className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-yellow-400 hover:border-yellow-400/50 transition-all duration-100 active:scale-95"
+          title="Drum Kits"
+        >
+          <Disc3 className="w-4 h-4" />
+        </button>
+
+        <button
           onClick={() => setMidiOpen(true)}
           className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-cyan hover:border-forge-cyan/50 transition-all duration-100 active:scale-95"
           title="MIDI Controller"
@@ -142,6 +162,12 @@ export function Toolbar() {
 
       {/* MIDI Settings Dialog */}
       <MidiSettings isOpen={midiOpen} onClose={() => setMidiOpen(false)} />
+
+      {/* Presets Dialog */}
+      <PresetsDialog isOpen={presetsOpen} onClose={() => setPresetsOpen(false)} />
+
+      {/* Drum Kit Selector */}
+      <DrumKitSelector isOpen={kitOpen} onClose={() => setKitOpen(false)} />
     </div>
   );
 }

@@ -31,6 +31,12 @@ export interface DAWState {
   reverbWet: number;
   delayWet: number;
 
+  // Piano Roll (Bass notes)
+  bassNotes: (string | null)[];
+
+  // Drum Kit selection
+  activeDrumKit: string;
+
   // Audio initialized
   audioReady: boolean;
 
@@ -47,6 +53,8 @@ export interface DAWState {
   setMasterVolume: (volume: number) => void;
   setAudioReady: (ready: boolean) => void;
   clearPattern: () => void;
+  setBassNote: (step: number, note: string | null) => void;
+  setActiveDrumKit: (kitId: string) => void;
 }
 
 const DRUM_ORDER: DrumType[] = ['kick', 'snare', 'hihat', 'bass'];
@@ -71,6 +79,8 @@ export const useDAWStore = create<DAWState>()(
       masterVolume: 0.8,
       reverbWet: 0.2,
       delayWet: 0.15,
+      bassNotes: Array(16).fill(null),
+      activeDrumKit: 'classic-808',
       audioReady: false,
 
       // Actions
@@ -112,6 +122,15 @@ export const useDAWStore = create<DAWState>()(
       setAudioReady: (ready) => set({ audioReady: ready }),
 
       clearPattern: () => set({ pattern: createEmptyPattern() }),
+
+      setBassNote: (step, note) =>
+        set((state) => {
+          const newNotes = [...state.bassNotes];
+          newNotes[step] = note;
+          return { bassNotes: newNotes };
+        }),
+
+      setActiveDrumKit: (kitId) => set({ activeDrumKit: kitId }),
     }),
     {
       name: 'beatforge-studio-state',
@@ -122,9 +141,34 @@ export const useDAWStore = create<DAWState>()(
         masterVolume: state.masterVolume,
         reverbWet: state.reverbWet,
         delayWet: state.delayWet,
+        bassNotes: state.bassNotes,
+        activeDrumKit: state.activeDrumKit,
       }),
     }
   )
 );
+
+export const DRUM_KITS_EXPORT = {
+  'classic-808': 'Classic 808',
+  'acoustic-kit': 'Acoustic',
+  'lofi-kit': 'Lo-Fi',
+  'deep-house': 'Deep House',
+  'trap-kit': 'Trap',
+};
+
+export const NOTE_FREQUENCIES: Record<string, number> = {
+  'C2': 65.41,
+  'D2': 73.42,
+  'E2': 82.41,
+  'F2': 87.31,
+  'G2': 98.00,
+  'A2': 110.00,
+  'B2': 123.47,
+  'C3': 130.81,
+  'D3': 146.83,
+  'E3': 164.81,
+  'F3': 174.61,
+  'G3': 196.00,
+};
 
 export { DRUM_ORDER };

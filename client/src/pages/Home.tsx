@@ -8,12 +8,13 @@ import { Toolbar } from '@/components/Toolbar';
 import { StepSequencer } from '@/components/StepSequencer';
 import { Mixer } from '@/components/Mixer';
 import { Effects } from '@/components/Effects';
+import { PianoRoll } from '@/components/PianoRoll';
 import { useAudio } from '@/hooks/useAudio';
 import { useDAWStore } from '@/lib/store';
 
 export default function Home() {
-  const { initAudio } = useAudio();
-  const { audioReady } = useDAWStore();
+  const { initAudio, triggerBassNote } = useAudio();
+  const { audioReady, bassNotes, setBassNote, currentStep } = useDAWStore();
 
   return (
     <div
@@ -32,6 +33,16 @@ export default function Home() {
         {/* Step Sequencer - Full Width */}
         <section className="flex-shrink-0">
           <StepSequencer />
+        </section>
+
+        {/* Piano Roll */}
+        <section className="flex-shrink-0">
+          <PianoRoll
+            notes={bassNotes}
+            onNoteChange={setBassNote}
+            onTriggerNote={triggerBassNote}
+            currentStep={currentStep}
+          />
         </section>
 
         {/* Bottom Section: Mixer + Effects */}

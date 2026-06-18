@@ -23,7 +23,9 @@ export class AudioEngine {
   private channels: Record<DrumType, Tone.Gain> = {} as Record<DrumType, Tone.Gain>;
   private recorder: Tone.Recorder | null = null;
   private sequencer: Tone.Sequence | null = null;
+  private bassSequencer: Tone.Sequence | null = null;
   private isInitialized = false;
+  private currentBassNotes: (string | null)[] = Array(16).fill(null);
 
   async initialize() {
     if (this.isInitialized) return;
@@ -217,6 +219,29 @@ export class AudioEngine {
     if (!this.recorder) return null;
     const blob = await this.recorder.stop();
     return blob;
+  }
+
+  setBassNotes(notes: (string | null)[]) {
+    this.currentBassNotes = notes;
+  }
+
+  triggerBassNote(note: string, velocity: number = 1) {
+    if (!this.isInitialized || !this.drums.bass) return;
+    const vol = Math.max(0, Math.min(1, velocity));
+    const freq = this.getNoteFrequency(note);
+    if (freq) {
+      (this.drums.bass as any).frequency.value = freq;
+      this.drums.bass.triggerAttackRelease('8n', Tone.now(), vol);
+    }
+  }
+
+  private getNoteFrequency(note: string): number | null {
+    const frequencies: Record<string, number> = {
+      'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00,
+      'A2': 110.00, 'B2': 123.47, 'C3': 130.81, 'D3': 146.83, 'E3': 164.81,
+      'F3': 174.61, 'G3': 196.00,
+    };
+    return frequencies[note] || null;
   }
 
   getInitialized(): boolean {

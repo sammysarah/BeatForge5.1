@@ -108,6 +108,15 @@ export function useAudio() {
     [initAudio]
   );
 
+  // Trigger bass note
+  const triggerBassNote = useCallback(
+    async (note: string) => {
+      await initAudio();
+      audioEngine.triggerBassNote(note);
+    },
+    [initAudio]
+  );
+
   // WAV Export
   const exportWAV = useCallback(async (): Promise<Blob | null> => {
     if (!audioReady) return null;
@@ -138,6 +147,7 @@ export function useAudio() {
   return {
     initAudio,
     triggerDrum,
+    triggerBassNote,
     exportWAV,
     audioReady,
   };

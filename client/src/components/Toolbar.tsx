@@ -4,13 +4,15 @@
  * Design: Neon Circuit – Hardware panel aesthetic
  */
 
-import { Play, Square, Download, Trash2, Usb, Music, Disc3 } from 'lucide-react';
+import { Play, Square, Download, Trash2, Usb, Music, Disc3, Zap, Save } from 'lucide-react';
 import { useDAWStore } from '@/lib/store';
 import { useAudio } from '@/hooks/useAudio';
 import { useCallback, useState } from 'react';
 import { MidiSettings } from './MidiSettings';
 import { PresetsDialog } from './PresetsDialog';
 import { DrumKitSelector } from './DrumKitSelector';
+import { SamplerDialog } from './SamplerDialog';
+import { PatternManager } from './PatternManager';
 
 export function Toolbar() {
   const { isPlaying, bpm, setBpm, togglePlayback, stop, clearPattern, audioReady } = useDAWStore();
@@ -18,6 +20,8 @@ export function Toolbar() {
   const [midiOpen, setMidiOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
+  const [samplerOpen, setSamplerOpen] = useState(false);
+  const [patternManagerOpen, setPatternManagerOpen] = useState(false);
 
   const handlePlay = useCallback(async () => {
     await initAudio();
@@ -135,6 +139,14 @@ export function Toolbar() {
         </button>
 
         <button
+          onClick={() => setSamplerOpen(true)}
+          className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-purple-400 hover:border-purple-400/50 transition-all duration-100 active:scale-95"
+          title="Sampler"
+        >
+          <Zap className="w-4 h-4" />
+        </button>
+
+        <button
           onClick={() => setMidiOpen(true)}
           className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-cyan hover:border-forge-cyan/50 transition-all duration-100 active:scale-95"
           title="MIDI Controller"
@@ -148,6 +160,15 @@ export function Toolbar() {
           title="Pattern löschen"
         >
           <Trash2 className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={() => setPatternManagerOpen(true)}
+          className="h-9 px-3 rounded flex items-center gap-2 bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-orange hover:border-forge-orange/50 transition-all duration-100 active:scale-95"
+          title="Pattern speichern/laden"
+        >
+          <Save className="w-4 h-4" />
+          <span className="text-xs uppercase tracking-wider hidden sm:inline">Save</span>
         </button>
 
         <button
@@ -168,6 +189,12 @@ export function Toolbar() {
 
       {/* Drum Kit Selector */}
       <DrumKitSelector isOpen={kitOpen} onClose={() => setKitOpen(false)} />
+
+      {/* Sampler Dialog */}
+      <SamplerDialog isOpen={samplerOpen} onClose={() => setSamplerOpen(false)} />
+
+      {/* Pattern Manager */}
+      <PatternManager isOpen={patternManagerOpen} onClose={() => setPatternManagerOpen(false)} />
     </div>
   );
 }

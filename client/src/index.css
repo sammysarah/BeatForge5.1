@@ -158,3 +158,63 @@
     border-radius: 0.375rem;
   }
 }
+
+
+  /* Mobile Touch Optimizations */
+  @media (max-width: 768px) {
+    /* Larger touch targets */
+    button {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Better spacing for touch */
+    input[type='range'] {
+      height: 8px;
+      cursor: pointer;
+    }
+
+    /* Prevent zoom on input focus */
+    input,
+    select,
+    textarea {
+      font-size: 16px;
+    }
+
+    /* Improve tap feedback */
+    button,
+    [role='button'],
+    input[type='button'],
+    input[type='submit'],
+    input[type='reset'] {
+      -webkit-tap-highlight-color: transparent;
+      transition: all 150ms ease-out;
+    }
+
+    /* Better scrolling */
+    .overflow-y-auto {
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+
+  @media (max-width: 480px) {
+    /* Stack toolbar vertically on very small screens */
+    .toolbar-row {
+      flex-wrap: wrap;
+    }
+
+    /* Hide labels on small screens */
+    .hide-on-mobile {
+      display: none;
+    }
+
+    /* Compact mode for mixer */
+    .mixer-compact {
+      gap: 0.5rem;
+    }
+
+    /* Responsive grid for sequencer */
+    .sequencer-grid {
+      gap: 0.25rem;
+    }
+  }

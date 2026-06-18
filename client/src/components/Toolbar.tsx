@@ -4,7 +4,7 @@
  * Design: Neon Circuit – Hardware panel aesthetic
  */
 
-import { Play, Square, Download, Trash2, Usb, Music, Disc3, Zap, Save } from 'lucide-react';
+import { Play, Square, Download, Trash2, Usb, Music, Disc3, Zap, Save, Mic } from 'lucide-react';
 import { useDAWStore } from '@/lib/store';
 import { useAudio } from '@/hooks/useAudio';
 import { useCallback, useState } from 'react';
@@ -13,6 +13,8 @@ import { PresetsDialog } from './PresetsDialog';
 import { DrumKitSelector } from './DrumKitSelector';
 import { SamplerDialog } from './SamplerDialog';
 import { PatternManager } from './PatternManager';
+import { UndoRedoButtons } from './UndoRedoButtons';
+import { LoopRecorder } from './LoopRecorder';
 
 export function Toolbar() {
   const { isPlaying, bpm, setBpm, togglePlayback, stop, clearPattern, audioReady } = useDAWStore();
@@ -22,6 +24,7 @@ export function Toolbar() {
   const [kitOpen, setKitOpen] = useState(false);
   const [samplerOpen, setSamplerOpen] = useState(false);
   const [patternManagerOpen, setPatternManagerOpen] = useState(false);
+  const [loopRecorderOpen, setLoopRecorderOpen] = useState(false);
 
   const handlePlay = useCallback(async () => {
     await initAudio();
@@ -120,8 +123,19 @@ export function Toolbar() {
         </span>
       </div>
 
+      {/* Undo/Redo */}
+      <UndoRedoButtons />
+
       {/* Action Buttons */}
       <div className="flex items-center gap-2 ml-4">
+        <button
+          onClick={() => setLoopRecorderOpen(true)}
+          className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-red-400 hover:border-red-400/50 transition-all duration-100 active:scale-95"
+          title="Loop Recorder"
+        >
+          <Mic className="w-4 h-4" />
+        </button>
+
         <button
           onClick={() => setPresetsOpen(true)}
           className="w-9 h-9 rounded flex items-center justify-center bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-orange hover:border-forge-orange/50 transition-all duration-100 active:scale-95"
@@ -195,6 +209,9 @@ export function Toolbar() {
 
       {/* Pattern Manager */}
       <PatternManager isOpen={patternManagerOpen} onClose={() => setPatternManagerOpen(false)} />
+
+      {/* Loop Recorder */}
+      <LoopRecorder isOpen={loopRecorderOpen} onClose={() => setLoopRecorderOpen(false)} />
     </div>
   );
 }

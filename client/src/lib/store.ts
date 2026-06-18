@@ -37,6 +37,10 @@ export interface DAWState {
   // Drum Kit selection
   activeDrumKit: string;
 
+  // Undo/Redo state
+  canUndo: boolean;
+  canRedo: boolean;
+
   // Audio initialized
   audioReady: boolean;
 
@@ -55,6 +59,9 @@ export interface DAWState {
   clearPattern: () => void;
   setBassNote: (step: number, note: string | null) => void;
   setActiveDrumKit: (kitId: string) => void;
+  undo: () => void;
+  redo: () => void;
+  pushHistory: () => void;
 }
 
 const DRUM_ORDER: DrumType[] = ['kick', 'snare', 'hihat', 'bass'];
@@ -81,14 +88,31 @@ export const useDAWStore = create<DAWState>()(
       delayWet: 0.15,
       bassNotes: Array(16).fill(null),
       activeDrumKit: 'classic-808',
+      canUndo: false,
+      canRedo: false,
       audioReady: false,
 
       // Actions
-      togglePlayback: () => set((state) => ({ isPlaying: !state.isPlaying })),
+      togglePlayback: () => {
+        set((state) => ({ isPlaying: !state.isPlaying }));
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
-      stop: () => set({ isPlaying: false, currentStep: -1 }),
+      stop: () => {
+        set({ isPlaying: false, currentStep: -1 });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
-      setBpm: (bpm) => set({ bpm: Math.max(60, Math.min(200, bpm)) }),
+      setBpm: (bpm) => {
+        set({ bpm: Math.max(60, Math.min(200, bpm)) });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
       setCurrentStep: (step) => set({ currentStep: step }),
 
@@ -96,41 +120,135 @@ export const useDAWStore = create<DAWState>()(
         set((state) => {
           const newPattern = state.pattern.map((row) => [...row]);
           newPattern[track][step] = !newPattern[track][step];
+          setTimeout(() => {
+            useDAWStore.getState().pushHistory();
+          }, 0);
           return { pattern: newPattern };
         }),
 
       setChannelVolume: (trackIndex, volume) =>
-        set((state) => ({
-          channels: state.channels.map((ch, i) =>
-            i === trackIndex ? { ...ch, volume: Math.max(0, Math.min(1, volume)) } : ch
-          ),
-        })),
+        set((state) => {
+          setTimeout(() => {
+            useDAWStore.getState().pushHistory();
+          }, 0);
+          return {
+            channels: state.channels.map((ch, i) =>
+              i === trackIndex ? { ...ch, volume: Math.max(0, Math.min(1, volume)) } : ch
+            ),
+          };
+        }),
 
       toggleMute: (trackIndex) =>
-        set((state) => ({
-          channels: state.channels.map((ch, i) =>
-            i === trackIndex ? { ...ch, muted: !ch.muted } : ch
-          ),
-        })),
+        set((state) => {
+          setTimeout(() => {
+            useDAWStore.getState().pushHistory();
+          }, 0);
+          return {
+            channels: state.channels.map((ch, i) =>
+              i === trackIndex ? { ...ch, muted: !ch.muted } : ch
+            ),
+          };
+        }),
 
-      setReverbWet: (value) => set({ reverbWet: Math.max(0, Math.min(1, value)) }),
+      setReverbWet: (value) => {
+        set({ reverbWet: Math.max(0, Math.min(1, value)) });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
-      setDelayWet: (value) => set({ delayWet: Math.max(0, Math.min(1, value)) }),
+      setDelayWet: (value) => {
+        set({ delayWet: Math.max(0, Math.min(1, value)) });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
-      setMasterVolume: (volume) => set({ masterVolume: Math.max(0, Math.min(1, volume)) }),
+      setMasterVolume: (volume) => {
+        set({ masterVolume: Math.max(0, Math.min(1, volume)) });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
       setAudioReady: (ready) => set({ audioReady: ready }),
 
-      clearPattern: () => set({ pattern: createEmptyPattern() }),
+      clearPattern: () => {
+        set({ pattern: createEmptyPattern() });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
 
       setBassNote: (step, note) =>
         set((state) => {
           const newNotes = [...state.bassNotes];
           newNotes[step] = note;
+          setTimeout(() => {
+            useDAWStore.getState().pushHistory();
+          }, 0);
           return { bassNotes: newNotes };
         }),
 
-      setActiveDrumKit: (kitId) => set({ activeDrumKit: kitId }),
+      setActiveDrumKit: (kitId) => {
+        set({ activeDrumKit: kitId });
+        setTimeout(() => {
+          useDAWStore.getState().pushHistory();
+        }, 0);
+      },
+
+      pushHistory: () => {
+        const state = useDAWStore.getState();
+        const { historyManager } = require('@/lib/history');
+        historyManager.push({
+          pattern: state.pattern,
+          bassNotes: state.bassNotes,
+          bpm: state.bpm,
+          channels: state.channels,
+          effects: {
+            reverbWet: state.reverbWet,
+            delayWet: state.delayWet,
+          },
+        });
+        set({
+          canUndo: historyManager.canUndo(),
+          canRedo: historyManager.canRedo(),
+        });
+      },
+
+      undo: () => {
+        const { historyManager } = require('@/lib/history');
+        const undoState = historyManager.undo();
+        if (undoState) {
+          set({
+            pattern: undoState.pattern,
+            bassNotes: undoState.bassNotes,
+            bpm: undoState.bpm,
+            channels: undoState.channels,
+            reverbWet: undoState.effects.reverbWet,
+            delayWet: undoState.effects.delayWet,
+            canUndo: historyManager.canUndo(),
+            canRedo: historyManager.canRedo(),
+          });
+        }
+      },
+
+      redo: () => {
+        const { historyManager } = require('@/lib/history');
+        const redoState = historyManager.redo();
+        if (redoState) {
+          set({
+            pattern: redoState.pattern,
+            bassNotes: redoState.bassNotes,
+            bpm: redoState.bpm,
+            channels: redoState.channels,
+            reverbWet: redoState.effects.reverbWet,
+            delayWet: redoState.effects.delayWet,
+            canUndo: historyManager.canUndo(),
+            canRedo: historyManager.canRedo(),
+          });
+        }
+      },
     }),
     {
       name: 'beatforge-studio-state',
@@ -143,10 +261,15 @@ export const useDAWStore = create<DAWState>()(
         delayWet: state.delayWet,
         bassNotes: state.bassNotes,
         activeDrumKit: state.activeDrumKit,
+        canUndo: state.canUndo,
+        canRedo: state.canRedo,
       }),
     }
   )
 );
+
+// Initialize history manager
+const { historyManager } = require('@/lib/history');
 
 export const DRUM_KITS_EXPORT = {
   'classic-808': 'Classic 808',

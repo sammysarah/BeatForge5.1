@@ -34,9 +34,9 @@ export function StepSequencer() {
   return (
     <div className="panel-surface p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3">
         <h2
-          className="text-sm font-semibold uppercase tracking-widest text-muted-foreground"
+          className="text-xs sm:text-sm font-semibold uppercase tracking-widest text-muted-foreground"
           style={{ fontFamily: 'Orbitron, sans-serif' }}
         >
           Step Sequencer
@@ -59,29 +59,30 @@ export function StepSequencer() {
       </div>
 
       {/* Grid */}
-      <div className="space-y-2">
+      <div className="space-y-1 sm:space-y-2">
         {DRUM_ORDER.map((drumType, trackIndex) => {
           const colors = TRACK_COLORS[drumType];
           const channel = channels[trackIndex];
 
           return (
-            <div key={drumType} className="flex items-center gap-3">
+            <div key={drumType} className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1">
               {/* Track label */}
-              <div className="w-16 flex-shrink-0">
+              <div className="w-12 sm:w-16 flex-shrink-0">
                 <button
                   onClick={() => {
                     initAudio();
                     triggerDrum(trackIndex);
                   }}
-                  className={`text-xs font-bold uppercase tracking-wider ${colors.label} hover:opacity-80 transition-opacity active:scale-95`}
+                  className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${colors.label} hover:opacity-80 transition-opacity active:scale-95`}
                 >
-                  {channel.name}
+                  <span className="hidden sm:inline">{channel.name}</span>
+                  <span className="sm:hidden">{channel.name.substring(0, 2)}</span>
                 </button>
               </div>
 
               {/* Steps */}
               <div
-                className="flex-1 grid gap-1"
+                className="flex-1 grid gap-0.5 sm:gap-1 min-w-0"
                 style={{ gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}
               >
                 {Array.from({ length: 16 }, (_, stepIndex) => {
@@ -94,7 +95,7 @@ export function StepSequencer() {
                       key={stepIndex}
                       onClick={() => handlePadClick(trackIndex, stepIndex)}
                       className={`
-                        aspect-square rounded-sm transition-all duration-75 active:scale-90
+                        w-8 h-8 sm:w-10 sm:h-10 rounded-sm transition-all duration-75 active:scale-90 touch-manipulation
                         ${isActive
                           ? colors.active
                           : isCurrentStep
@@ -105,7 +106,7 @@ export function StepSequencer() {
                         }
                         ${isCurrentStep && isActive ? 'scale-105' : ''}
                         ${channel.muted ? 'opacity-30' : ''}
-                        hover:border-forge-orange/50
+                        hover:border-forge-orange/50 sm:hover:border-forge-orange/50
                       `}
                     />
                   );

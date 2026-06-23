@@ -5,6 +5,7 @@
  */
 
 import * as Tone from 'tone';
+import type { DrumKitConfig } from './drumKits';
 
 export type DrumType = 'kick' | 'snare' | 'hihat' | 'bass';
 
@@ -21,11 +22,13 @@ export class AudioEngine {
   private delay: Tone.FeedbackDelay | null = null;
   private master: Tone.Gain | null = null;
   private channels: Record<DrumType, Tone.Gain> = {} as Record<DrumType, Tone.Gain>;
+  private channelVolumes: Record<DrumType, number> = { kick: 0.8, snare: 0.7, hihat: 0.6, bass: 0.75 };
+  private channelMuted: Record<DrumType, boolean> = { kick: false, snare: false, hihat: false, bass: false };
   private recorder: Tone.Recorder | null = null;
   private sequencer: Tone.Sequence | null = null;
-  private bassSequencer: Tone.Sequence | null = null;
   private isInitialized = false;
   private currentBassNotes: (string | null)[] = Array(16).fill(null);
+  private swingAmount: number = 0; // 0-100
 
   async initialize() {
     if (this.isInitialized) return;
@@ -99,7 +102,7 @@ export class AudioEngine {
         },
       }).connect(this.channels.bass);
 
-      // Recorder for WAV export
+      // Recorder for audio export
       this.recorder = new Tone.Recorder();
       this.master.connect(this.recorder);
 
@@ -109,36 +112,40 @@ export class AudioEngine {
     }
   }
 
-  triggerDrum(type: DrumType, velocity: number = 1) {
+  triggerDrum(type: DrumType, velocity: number = 1, time?: number) {
     if (!this.isInitialized) return;
 
     const vol = Math.max(0, Math.min(1, velocity));
+    const t = time ?? Tone.now();
 
     switch (type) {
       case 'kick':
-        this.drums.kick?.triggerAttackRelease('C1', '8n', undefined, vol);
+        this.drums.kick?.triggerAttackRelease('C1', '8n', t, vol);
         break;
       case 'snare':
-        this.drums.snare?.triggerAttackRelease('8n', Tone.now(), vol);
+        this.drums.snare?.triggerAttackRelease('8n', t, vol);
         break;
       case 'hihat':
-        this.drums.hihat?.triggerAttackRelease('32n', Tone.now(), vol * 0.3);
+        this.drums.hihat?.triggerAttackRelease('32n', t, vol * 0.3);
         break;
       case 'bass':
-        this.drums.bass?.triggerAttackRelease('C2', '8n', undefined, vol);
+        this.drums.bass?.triggerAttackRelease('C2', '8n', t, vol);
         break;
     }
   }
 
   setChannelVolume(type: DrumType, volume: number) {
-    if (this.channels[type]) {
-      this.channels[type].gain.value = Math.max(0, Math.min(1, volume));
+    const clampedVolume = Math.max(0, Math.min(1, volume));
+    this.channelVolumes[type] = clampedVolume;
+    if (this.channels[type] && !this.channelMuted[type]) {
+      this.channels[type].gain.value = clampedVolume;
     }
   }
 
   setChannelMute(type: DrumType, muted: boolean) {
+    this.channelMuted[type] = muted;
     if (this.channels[type]) {
-      this.channels[type].gain.value = muted ? 0 : 1;
+      this.channels[type].gain.value = muted ? 0 : this.channelVolumes[type];
     }
   }
 
@@ -168,12 +175,67 @@ export class AudioEngine {
     return Tone.getTransport().bpm.value;
   }
 
+  setSwing(amount: number) {
+    this.swingAmount = Math.max(0, Math.min(100, amount));
+    // Tone.js swing is 0-1
+    Tone.getTransport().swing = this.swingAmount / 100;
+    Tone.getTransport().swingSubdivision = '16n';
+  }
+
+  /**
+   * Apply a drum kit configuration to the synthesizers
+   */
+  applyDrumKit(kit: DrumKitConfig) {
+    if (!this.isInitialized) return;
+
+    // Update kick
+    if (this.drums.kick) {
+      this.drums.kick.set({
+        pitchDecay: kit.kickConfig.pitchDecay,
+        octaves: kit.kickConfig.octaves,
+        envelope: {
+          decay: kit.kickConfig.decayTime,
+        },
+      });
+    }
+
+    // Update snare
+    if (this.drums.snare) {
+      this.drums.snare.set({
+        envelope: {
+          decay: kit.snareConfig.decayTime,
+        },
+      });
+    }
+
+    // Update hihat
+    if (this.drums.hihat) {
+      this.drums.hihat.set({
+        harmonicity: kit.hihatConfig.harmonicity,
+        modulationIndex: kit.hihatConfig.modulationIndex,
+        resonance: kit.hihatConfig.resonance,
+      });
+    }
+  }
+
+  /**
+   * Set bass notes for sequencer playback
+   */
+  setBassNotes(notes: (string | null)[]) {
+    this.currentBassNotes = notes;
+  }
+
+  /**
+   * Start the sequencer with pattern and bass notes
+   */
   startSequence(
     pattern: boolean[][],
     drumOrder: DrumType[],
+    bassNotes: (string | null)[],
     onStep: (step: number) => void
   ) {
     this.stopSequence();
+    this.currentBassNotes = bassNotes;
 
     const steps = pattern[0]?.length || 16;
     const indices = Array.from({ length: steps }, (_, i) => i);
@@ -182,8 +244,18 @@ export class AudioEngine {
       (time, stepIndex) => {
         // Trigger drums for active steps
         drumOrder.forEach((drum, trackIndex) => {
-          if (pattern[trackIndex]?.[stepIndex]) {
-            this.triggerDrum(drum);
+          if (drum === 'bass') {
+            // For bass track: use piano roll notes if available, otherwise use pattern
+            const bassNote = this.currentBassNotes[stepIndex];
+            if (bassNote) {
+              this.triggerBassNote(bassNote, 1, time);
+            } else if (pattern[trackIndex]?.[stepIndex]) {
+              this.triggerDrum(drum, 1, time);
+            }
+          } else {
+            if (pattern[trackIndex]?.[stepIndex]) {
+              this.triggerDrum(drum, 1, time);
+            }
           }
         });
 
@@ -221,27 +293,10 @@ export class AudioEngine {
     return blob;
   }
 
-  setBassNotes(notes: (string | null)[]) {
-    this.currentBassNotes = notes;
-  }
-
-  triggerBassNote(note: string, velocity: number = 1) {
+  triggerBassNote(note: string, velocity: number = 1, time?: number) {
     if (!this.isInitialized || !this.drums.bass) return;
     const vol = Math.max(0, Math.min(1, velocity));
-    const freq = this.getNoteFrequency(note);
-    if (freq) {
-      (this.drums.bass as any).frequency.value = freq;
-      this.drums.bass.triggerAttackRelease('8n', Tone.now(), vol);
-    }
-  }
-
-  private getNoteFrequency(note: string): number | null {
-    const frequencies: Record<string, number> = {
-      'C2': 65.41, 'D2': 73.42, 'E2': 82.41, 'F2': 87.31, 'G2': 98.00,
-      'A2': 110.00, 'B2': 123.47, 'C3': 130.81, 'D3': 146.83, 'E3': 164.81,
-      'F3': 174.61, 'G3': 196.00,
-    };
-    return frequencies[note] || null;
+    this.drums.bass.triggerAttackRelease(note, '8n', time ?? Tone.now(), vol);
   }
 
   getInitialized(): boolean {

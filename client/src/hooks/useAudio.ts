@@ -6,16 +6,20 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { audioEngine } from '@/lib/audioEngine';
 import { useDAWStore, DRUM_ORDER } from '@/lib/store';
+import { DRUM_KITS } from '@/lib/drumKits';
 
 export function useAudio() {
   const {
     isPlaying,
     bpm,
+    swing,
     pattern,
     channels,
     masterVolume,
     reverbWet,
     delayWet,
+    bassNotes,
+    activeDrumKit,
     audioReady,
     setCurrentStep,
     setAudioReady,
@@ -25,13 +29,21 @@ export function useAudio() {
   const patternRef = useRef(pattern);
   patternRef.current = pattern;
 
+  const bassNotesRef = useRef(bassNotes);
+  bassNotesRef.current = bassNotes;
+
   // Initialize audio on first user interaction
   const initAudio = useCallback(async () => {
     if (!audioReady) {
       await audioEngine.initialize();
       setAudioReady(true);
+      // Apply the current drum kit on init
+      const kit = DRUM_KITS.find((k) => k.id === activeDrumKit);
+      if (kit) {
+        audioEngine.applyDrumKit(kit);
+      }
     }
-  }, [audioReady, setAudioReady]);
+  }, [audioReady, setAudioReady, activeDrumKit]);
 
   // Sync BPM
   useEffect(() => {
@@ -40,15 +52,19 @@ export function useAudio() {
     }
   }, [bpm, audioReady]);
 
+  // Sync Swing
+  useEffect(() => {
+    if (audioReady) {
+      audioEngine.setSwing(swing);
+    }
+  }, [swing, audioReady]);
+
   // Sync channel volumes
   useEffect(() => {
     if (!audioReady) return;
     channels.forEach((ch) => {
-      if (ch.muted) {
-        audioEngine.setChannelMute(ch.id, true);
-      } else {
-        audioEngine.setChannelVolume(ch.id, ch.volume);
-      }
+      audioEngine.setChannelVolume(ch.id, ch.volume);
+      audioEngine.setChannelMute(ch.id, ch.muted);
     });
   }, [channels, audioReady]);
 
@@ -72,12 +88,28 @@ export function useAudio() {
     }
   }, [delayWet, audioReady]);
 
+  // Sync drum kit
+  useEffect(() => {
+    if (!audioReady) return;
+    const kit = DRUM_KITS.find((k) => k.id === activeDrumKit);
+    if (kit) {
+      audioEngine.applyDrumKit(kit);
+    }
+  }, [activeDrumKit, audioReady]);
+
+  // Sync bass notes to engine
+  useEffect(() => {
+    if (audioReady) {
+      audioEngine.setBassNotes(bassNotes);
+    }
+  }, [bassNotes, audioReady]);
+
   // Handle playback
   useEffect(() => {
     if (!audioReady) return;
 
     if (isPlaying) {
-      audioEngine.startSequence(patternRef.current, DRUM_ORDER, (step) => {
+      audioEngine.startSequence(patternRef.current, DRUM_ORDER, bassNotesRef.current, (step) => {
         setCurrentStep(step);
       });
     } else {
@@ -86,15 +118,15 @@ export function useAudio() {
     }
   }, [isPlaying, audioReady, setCurrentStep]);
 
-  // Update pattern while playing
+  // Update pattern/bass notes while playing
   useEffect(() => {
     if (!audioReady || !isPlaying) return;
-    // Restart sequence with new pattern
+    // Restart sequence with new pattern and bass notes
     audioEngine.stopSequence();
-    audioEngine.startSequence(pattern, DRUM_ORDER, (step) => {
+    audioEngine.startSequence(pattern, DRUM_ORDER, bassNotes, (step) => {
       setCurrentStep(step);
     });
-  }, [pattern, audioReady, isPlaying, setCurrentStep]);
+  }, [pattern, bassNotes, audioReady, isPlaying, setCurrentStep]);
 
   // Trigger single drum sound (for pad preview)
   const triggerDrum = useCallback(
@@ -117,8 +149,8 @@ export function useAudio() {
     [initAudio]
   );
 
-  // WAV Export
-  const exportWAV = useCallback(async (): Promise<Blob | null> => {
+  // Audio Export (WebM format from Tone.Recorder)
+  const exportAudio = useCallback(async (): Promise<Blob | null> => {
     if (!audioReady) return null;
 
     await audioEngine.startRecording();
@@ -127,15 +159,15 @@ export function useAudio() {
     const stepDuration = 60 / bpm / 4; // duration of one 16th note
     const totalDuration = stepDuration * 16;
 
-    audioEngine.startSequence(pattern, DRUM_ORDER, () => {});
+    audioEngine.startSequence(pattern, DRUM_ORDER, bassNotes, () => {});
 
-    // Wait for one full loop
+    // Wait for one full loop plus a small buffer
     await new Promise((resolve) => setTimeout(resolve, totalDuration * 1000 + 200));
 
     audioEngine.stopSequence();
     const blob = await audioEngine.stopRecording();
     return blob;
-  }, [audioReady, bpm, pattern]);
+  }, [audioReady, bpm, pattern, bassNotes]);
 
   // Cleanup
   useEffect(() => {
@@ -148,7 +180,7 @@ export function useAudio() {
     initAudio,
     triggerDrum,
     triggerBassNote,
-    exportWAV,
+    exportAudio,
     audioReady,
   };
 }

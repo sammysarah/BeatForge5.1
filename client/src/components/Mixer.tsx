@@ -10,7 +10,7 @@ import { Volume2, VolumeX } from 'lucide-react';
 const CHANNEL_COLORS = ['#FF6B00', '#00E5FF', '#FACC15', '#A855F7'];
 
 export function Mixer() {
-  const { channels, masterVolume, setChannelVolume, toggleMute, setMasterVolume } = useDAWStore();
+  const { channels, masterVolume, setChannelVolume, toggleMute, toggleSolo, setMasterVolume } = useDAWStore();
 
   return (
     <div className="panel-surface p-4 h-full">
@@ -94,6 +94,19 @@ export function Mixer() {
               ) : (
                 <Volume2 className="w-3.5 h-3.5" />
               )}
+            </button>
+
+            {/* Solo button */}
+            <button
+              onClick={() => toggleSolo(index)}
+              className={`w-8 h-8 rounded flex items-center justify-center text-xs font-bold transition-all duration-100 active:scale-90 ${
+                channel.solo
+                  ? 'bg-yellow-500/20 border border-yellow-500/50 text-yellow-400'
+                  : 'bg-forge-surface border border-forge-border text-muted-foreground hover:text-foreground'
+              }`}
+              title={channel.solo ? 'Unsolo' : 'Solo'}
+            >
+              S
             </button>
 
             {/* Volume value */}

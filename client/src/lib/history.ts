@@ -3,15 +3,18 @@
  * Track state changes for undo/redo functionality
  */
 
+import type { DrumType } from './audioEngine';
+
 export interface HistoryState {
   pattern: boolean[][];
   bassNotes: (string | null)[];
   bpm: number;
   channels: Array<{
-    id: string;
+    id: DrumType;
     name: string;
     volume: number;
     muted: boolean;
+    solo: boolean;
   }>;
   effects: {
     reverbWet: number;
@@ -25,6 +28,14 @@ export class HistoryManager {
   private maxHistorySize: number = 50;
 
   push(state: HistoryState): void {
+    // Deduplicate: don't push if identical to current state
+    if (this.currentIndex >= 0) {
+      const current = this.history[this.currentIndex];
+      if (JSON.stringify(current) === JSON.stringify(state)) {
+        return;
+      }
+    }
+
     // Remove any future history if we're not at the end
     if (this.currentIndex < this.history.length - 1) {
       this.history = this.history.slice(0, this.currentIndex + 1);

@@ -30,8 +30,8 @@ export function PatternManager({ isOpen, onClose }: PatternManagerProps) {
     delayWet,
     activeDrumKit,
     setBpm,
-    toggleStep,
-    setBassNote,
+    setPattern,
+    setBassNotes,
     setChannelVolume,
     toggleMute,
     setReverbWet,
@@ -106,33 +106,27 @@ export function PatternManager({ isOpen, onClose }: PatternManagerProps) {
       // Load BPM
       setBpm(data.bpm);
 
-      // Load pattern
-      for (let track = 0; track < 4; track++) {
-        for (let step = 0; step < 16; step++) {
-          const isActive = pattern[track][step];
-          const shouldBeActive = data.pattern[track][step];
-          if (isActive !== shouldBeActive) {
-            toggleStep(track, step);
-          }
-        }
+      // Load pattern atomically
+      if (data.pattern && Array.isArray(data.pattern)) {
+        setPattern(data.pattern.map((row: boolean[]) => [...row]));
       }
 
-      // Load bass notes
-      data.bassNotes?.forEach((note: string | null, step: number) => {
-        setBassNote(step, note);
-      });
+      // Load bass notes atomically
+      if (data.bassNotes && Array.isArray(data.bassNotes)) {
+        setBassNotes([...data.bassNotes]);
+      }
 
       // Load channel settings
       data.channels?.forEach((ch: any, idx: number) => {
         setChannelVolume(idx, ch.volume);
-        if (ch.muted !== channels[idx].muted) {
+        if (ch.muted !== channels[idx]?.muted) {
           toggleMute(idx);
         }
       });
 
       // Load effects
-      setReverbWet(data.effects?.reverbWet || 0.2);
-      setDelayWet(data.effects?.delayWet || 0.15);
+      setReverbWet(data.effects?.reverbWet ?? 0.2);
+      setDelayWet(data.effects?.delayWet ?? 0.15);
 
       // Load drum kit
       if (data.drumKit) {
@@ -140,11 +134,10 @@ export function PatternManager({ isOpen, onClose }: PatternManagerProps) {
       }
     },
     [
-      pattern,
       channels,
       setBpm,
-      toggleStep,
-      setBassNote,
+      setPattern,
+      setBassNotes,
       setChannelVolume,
       toggleMute,
       setReverbWet,

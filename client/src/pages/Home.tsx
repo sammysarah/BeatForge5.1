@@ -1,6 +1,6 @@
 /**
  * BeatForge Studio – Main Page
- * Full DAW layout: Toolbar → Sequencer → Mixer + Effects
+ * Full DAW layout: Toolbar → Sequencer → Piano Roll → Mixer + Effects
  * Design: Neon Circuit – Hardware panel layout, single-screen workflow
  */
 
@@ -10,11 +10,15 @@ import { Mixer } from '@/components/Mixer';
 import { Effects } from '@/components/Effects';
 import { PianoRoll } from '@/components/PianoRoll';
 import { useAudio } from '@/hooks/useAudio';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useDAWStore } from '@/lib/store';
 
 export default function Home() {
   const { initAudio, triggerBassNote } = useAudio();
   const { audioReady, bassNotes, setBassNote, currentStep } = useDAWStore();
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
 
   return (
     <div
@@ -56,7 +60,11 @@ export default function Home() {
       <footer className="px-4 py-2 border-t border-forge-border flex items-center justify-between text-[10px] text-muted-foreground">
         <span>BeatForge Studio v5.1</span>
         <span className="flex items-center gap-2">
-          <span className="uppercase tracking-wider">Touch Optimized</span>
+          <span className="uppercase tracking-wider">Space: Play</span>
+          <span>|</span>
+          <span className="uppercase tracking-wider">Esc: Stop</span>
+          <span>|</span>
+          <span className="uppercase tracking-wider">Ctrl+Z: Undo</span>
           <span>|</span>
           <span className="uppercase tracking-wider">PWA Ready</span>
         </span>

@@ -13,7 +13,7 @@ interface PresetsDialogProps {
 }
 
 export function PresetsDialog({ isOpen, onClose }: PresetsDialogProps) {
-  const { setBpm, pattern: currentPattern } = useDAWStore();
+  const { setBpm, setPattern } = useDAWStore();
 
   const handleLoadPreset = (presetId: string) => {
     const preset = PATTERN_PRESETS.find((p) => p.id === presetId);
@@ -21,26 +21,8 @@ export function PresetsDialog({ isOpen, onClose }: PresetsDialogProps) {
       // Set BPM
       setBpm(preset.bpm);
 
-      // Load pattern
-      const { toggleStep } = useDAWStore.getState();
-      
-      // Clear current pattern
-      for (let track = 0; track < 4; track++) {
-        for (let step = 0; step < 16; step++) {
-          if (currentPattern[track][step]) {
-            toggleStep(track, step);
-          }
-        }
-      }
-
-      // Load new pattern
-      for (let track = 0; track < 4; track++) {
-        for (let step = 0; step < 16; step++) {
-          if (preset.pattern[track][step] && !currentPattern[track][step]) {
-            toggleStep(track, step);
-          }
-        }
-      }
+      // Load pattern atomically
+      setPattern(preset.pattern.map((row) => [...row]));
 
       onClose();
     }
@@ -54,7 +36,7 @@ export function PresetsDialog({ isOpen, onClose }: PresetsDialogProps) {
       onClick={onClose}
     >
       <div
-        className="panel-surface w-full max-w-2xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto"
+        className="panel-surface w-full max-w-lg p-6 shadow-2xl max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-6">
@@ -75,40 +57,38 @@ export function PresetsDialog({ isOpen, onClose }: PresetsDialogProps) {
           </button>
         </div>
 
-        {/* Presets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Preset List */}
+        <div className="space-y-2">
           {PATTERN_PRESETS.map((preset) => (
             <button
               key={preset.id}
               onClick={() => handleLoadPreset(preset.id)}
-              className="panel-inset p-4 text-left hover:border-forge-orange/50 transition-all group"
+              className="w-full panel-inset p-4 text-left transition-all group hover:border-forge-orange/50"
             >
-              <div className="flex items-start justify-between mb-2">
+              <div className="flex items-start justify-between">
                 <div>
                   <h4 className="font-semibold text-sm text-foreground group-hover:text-forge-orange transition-colors">
                     {preset.name}
                   </h4>
-                  <p className="text-xs text-muted-foreground">{preset.genre}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{preset.description}</p>
                 </div>
-                <span className="text-xs font-mono bg-forge-surface px-2 py-1 rounded text-forge-cyan">
-                  {preset.bpm} BPM
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-forge-cyan font-mono">{preset.bpm} BPM</span>
+                  <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-forge-deep">
+                    {preset.genre}
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">{preset.description}</p>
 
-              {/* Visual pattern preview */}
-              <div className="mt-3 flex gap-1">
-                {preset.pattern.map((track, trackIdx) => (
-                  <div key={trackIdx} className="flex-1 flex flex-col gap-0.5">
-                    {track.map((step, stepIdx) => (
-                      <div
-                        key={stepIdx}
-                        className={`h-1 rounded-[1px] ${
-                          step ? 'bg-forge-orange' : 'bg-forge-deep'
-                        }`}
-                      />
-                    ))}
-                  </div>
+              {/* Pattern Preview */}
+              <div className="mt-3 grid grid-cols-16 gap-px">
+                {preset.pattern[0].map((active, i) => (
+                  <div
+                    key={i}
+                    className={`h-1.5 rounded-sm ${
+                      active ? 'bg-forge-orange/70' : 'bg-forge-deep'
+                    }`}
+                  />
                 ))}
               </div>
             </button>

@@ -1,6 +1,6 @@
 /**
  * BeatForge Studio – Toolbar
- * Transport controls: Play/Stop, BPM, Export
+ * Transport controls: Play/Stop, BPM, Swing, Export
  * Design: Neon Circuit – Hardware panel aesthetic
  */
 
@@ -17,14 +17,15 @@ import { UndoRedoButtons } from './UndoRedoButtons';
 import { LoopRecorder } from './LoopRecorder';
 
 export function Toolbar() {
-  const { isPlaying, bpm, setBpm, togglePlayback, stop, clearPattern, audioReady } = useDAWStore();
-  const { initAudio, exportWAV } = useAudio();
+  const { isPlaying, bpm, swing, setBpm, setSwing, togglePlayback, stop, clearPattern, audioReady } = useDAWStore();
+  const { initAudio, exportAudio } = useAudio();
   const [midiOpen, setMidiOpen] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [kitOpen, setKitOpen] = useState(false);
   const [samplerOpen, setSamplerOpen] = useState(false);
   const [patternManagerOpen, setPatternManagerOpen] = useState(false);
   const [loopRecorderOpen, setLoopRecorderOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handlePlay = useCallback(async () => {
     await initAudio();
@@ -36,20 +37,26 @@ export function Toolbar() {
   }, [stop]);
 
   const handleExport = useCallback(async () => {
-    await initAudio();
-    const blob = await exportWAV();
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `beatforge-export-${Date.now()}.webm`;
-      a.click();
-      URL.revokeObjectURL(url);
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await initAudio();
+      const blob = await exportAudio();
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `beatforge-export-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setIsExporting(false);
     }
-  }, [initAudio, exportWAV]);
+  }, [initAudio, exportAudio, isExporting]);
 
   return (
-    <div className="panel-surface px-4 py-3 flex items-center gap-4">
+    <div className="panel-surface px-4 py-3 flex items-center gap-4 flex-wrap">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-4">
         <img
@@ -109,6 +116,23 @@ export function Toolbar() {
           >
             +
           </button>
+        </div>
+      </div>
+
+      {/* Swing Control */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">Swing</span>
+        <div className="panel-inset px-3 py-1.5 flex items-center gap-2">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={swing}
+            onChange={(e) => setSwing(Number(e.target.value))}
+            className="w-16 h-1.5 bg-forge-deep rounded appearance-none cursor-pointer"
+            style={{ accentColor: '#00e5ff' }}
+          />
+          <span className="text-xs text-forge-cyan font-mono w-8">{swing}%</span>
         </div>
       </div>
 
@@ -187,11 +211,18 @@ export function Toolbar() {
 
         <button
           onClick={handleExport}
-          className="h-9 px-3 rounded flex items-center gap-2 bg-forge-surface border border-forge-border text-muted-foreground hover:text-forge-cyan hover:border-forge-cyan/50 transition-all duration-100 active:scale-95"
+          disabled={isExporting}
+          className={`h-9 px-3 rounded flex items-center gap-2 bg-forge-surface border border-forge-border transition-all duration-100 active:scale-95 ${
+            isExporting
+              ? 'text-forge-cyan/50 cursor-wait'
+              : 'text-muted-foreground hover:text-forge-cyan hover:border-forge-cyan/50'
+          }`}
           title="Als Audio exportieren"
         >
-          <Download className="w-4 h-4" />
-          <span className="text-xs uppercase tracking-wider hidden sm:inline">Export</span>
+          <Download className={`w-4 h-4 ${isExporting ? 'animate-pulse' : ''}`} />
+          <span className="text-xs uppercase tracking-wider hidden sm:inline">
+            {isExporting ? 'Rendering...' : 'Export'}
+          </span>
         </button>
       </div>
 
